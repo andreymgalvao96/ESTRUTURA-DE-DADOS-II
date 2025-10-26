@@ -1,0 +1,171 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+typedef struct Node {
+    double value;
+    struct Node* next;
+} Node;
+
+typedef struct {
+    Node* top;
+} Stack;
+
+Stack* createStack() {
+    Stack* stack = (Stack*)malloc(sizeof(Stack));
+    if (stack == NULL) {
+        fprintf(stderr, "Erro: Falha na alocacao de memoria para a pilha.\n");
+        exit(EXIT_FAILURE);
+    }
+    stack->top = NULL;
+    return stack;
+}
+
+void push(Stack* stack, double value) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        fprintf(stderr, "Erro: Falha na alocacao de memoria para o no.\n");
+        exit(EXIT_FAILURE);
+    }
+    newNode->value = value;
+    newNode->next = stack->top;
+    stack->top = newNode;
+}
+
+double pop(Stack* stack) {
+    if (stack->top == NULL) {
+        fprintf(stderr, "Erro: Tentativa de pop em pilha vazia.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    Node* temp = stack->top;
+    double value = temp->value;
+    stack->top = temp->next;
+    free(temp);
+    return value;
+}
+
+int isEmpty(Stack* stack) {
+    return stack->top == NULL;
+}
+
+void freeStack(Stack* stack) {
+    while (stack->top != NULL) {
+        Node* temp = stack->top;
+        stack->top = stack->top->next;
+        free(temp);
+    }
+    free(stack);
+}
+
+int isNumber(const char* str) {
+    char* endptr;
+    strtod(str, &endptr);
+    return endptr != str && *endptr == '\0';
+}
+
+double evaluateRPN(char* expression) {
+    Stack* stack = createStack();
+    char* token = strtok(expression, " ");
+    
+    while (token != NULL) {
+        // Verifica se é um número
+        if (isNumber(token)) {
+            double value = atof(token);
+            push(stack, value);
+        }
+        
+        else if (strlen(token) == 1 && strchr("+-*/", token[0])) {
+      
+            if (isEmpty(stack)) {
+                freeStack(stack);
+                fprintf(stderr, "Erro: Expressao malformada (operandos insuficientes para o operador '%c').\n", token[0]);
+                exit(EXIT_FAILURE);
+            }
+            double val2 = pop(stack);
+            
+            if (isEmpty(stack)) {
+                freeStack(stack);
+                fprintf(stderr, "Erro: Expressao malformada (operandos insuficientes para o operador '%c').\n", token[0]);
+                exit(EXIT_FAILURE);
+            }
+            double val1 = pop(stack);
+            double result;
+            
+            switch (token[0]) {
+                case '+':
+                    result = val1 + val2;
+                    break;
+                case '-':
+                    result = val1 - val2;
+                    break;
+                case '*':
+                    result = val1 * val2;
+                    break;
+                case '/':
+                    if (val2 == 0.0) {
+                        freeStack(stack);
+                        fprintf(stderr, "Erro: Tentativa de divisao por zero.\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    result = val1 / val2;
+                    break;
+                default:
+                    freeStack(stack);
+                    fprintf(stderr, "Erro: Operador desconhecido '%c'.\n", token[0]);
+                    exit(EXIT_FAILURE);
+            }
+            
+            push(stack, result);
+        }
+        else {
+            freeStack(stack);
+            fprintf(stderr, "Erro: Token invalido '%s'.\n", token);
+            exit(EXIT_FAILURE);
+        }
+        
+        token = strtok(NULL, " ");
+    }
+  
+    if (isEmpty(stack)) {
+        freeStack(stack);
+        fprintf(stderr, "Erro: Expressao vazia.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    double finalResult = pop(stack);
+    
+    if (!isEmpty(stack)) {
+        freeStack(stack);
+        fprintf(stderr, "Erro: Expressao malformada (operandos em excesso).\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    freeStack(stack);
+    return finalResult;
+}
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s \"expressao_rpn\"\n", argv[0]);
+        fprintf(stderr, "Exemplo: %s \"10 5 + 3 *\"\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+  
+    char* expression = malloc(strlen(argv[1]) + 1);
+    if (expression == NULL) {
+        fprintf(stderr, "Erro: Falha na alocacao de memoria.\n");
+        return EXIT_FAILURE;
+    }
+    strcpy(expression, argv[1]);
+    
+    try {
+        double result = evaluateRPN(expression);
+        printf("Resultado: %.2f\n", result);
+        free(expression);
+        return EXIT_SUCCESS;
+    } catch (...) {
+        free(expression);
+        return EXIT_FAILURE;
+    }
+}
