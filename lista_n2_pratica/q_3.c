@@ -135,17 +135,9 @@ double evaluateRPN(char* expression) {
 		}
 		// Se for um número
 		else {
-			char* endptr;
-			// Converte a string para double. strtod é mais seguro que atof.
-			double value = strtod(token, &endptr);
-
-			// Se *endptr não for '\0', significa que houve caracteres não numéricos após o número.
-			if (*endptr != '\0') {
-				fprintf(stderr, "Erro: Token invalido '%s'.\n", token);
-				freeStack(stack);
-				exit(EXIT_FAILURE);
-			}
-			push(stack, value);
+		// Converte a string para double usando atof.    
+            double value = atof(token);
+            push(stack, value);
 		}
 		token = strtok(NULL, " ");
 	}
